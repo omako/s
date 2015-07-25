@@ -276,6 +276,7 @@
 #include <sstream>  // NOLINT
 #include <string>  // NOLINT
 #include <utility>
+#include <vector>  // NOLINT
 
 #include "gtest/internal/gtest-port-arch.h"
 #include "gtest/internal/custom/gtest-port.h"
@@ -785,7 +786,6 @@ using ::std::tuple_size;
      GTEST_OS_WINDOWS_MINGW || GTEST_OS_AIX || GTEST_OS_HPUX || \
      GTEST_OS_OPENBSD || GTEST_OS_QNX || GTEST_OS_FREEBSD)
 # define GTEST_HAS_DEATH_TEST 1
-# include <vector>  // NOLINT
 #endif
 
 // We don't support MSVC 7.1 with exceptions disabled now.  Therefore
@@ -1334,7 +1334,7 @@ const T& move(const T& t) {
 // similar functions users may have (e.g., implicit_cast). The internal
 // namespace alone is not enough because the function can be found by ADL.
 template<typename To>
-inline To ImplicitCast_(To x) { return ::testing::internal::move(x); }
+inline To ImplicitCast_(To x) { return x; }
 
 // When you upcast (that is, cast a pointer from type Foo to type
 // SuperclassOfFoo), it's fine to use ImplicitCast_<>, since upcasts
@@ -1421,14 +1421,15 @@ GTEST_API_ size_t GetFileSize(FILE* file);
 // Reads the entire content of a file as a string.
 GTEST_API_ std::string ReadEntireFile(FILE* file);
 
+// All command line arguments.
+GTEST_API_ const ::std::vector<testing::internal::string>& GetArgvs();
+
 #if GTEST_HAS_DEATH_TEST
 
 const ::std::vector<testing::internal::string>& GetInjectableArgvs();
 void SetInjectableArgvs(const ::std::vector<testing::internal::string>*
                              new_argvs);
 
-// A copy of all command line arguments.  Set by ParseGTestFlags().
-extern ::std::vector<testing::internal::string> g_argvs;
 
 #endif  // GTEST_HAS_DEATH_TEST
 
