@@ -14,6 +14,7 @@
 #include <cassert>
 #include <condition_variable>
 #include <iostream>
+#include <list>
 #include <memory>
 #include <queue>
 #include <stack>
