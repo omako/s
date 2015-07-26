@@ -11,7 +11,6 @@ class FileReader {
   };
   struct ReadResult {
     Status status;
-    std::shared_ptr<IOBuffer> buffer;
     uint32_t size;
   };
   using ReadCallback = std::function<void(ReadResult)>;
@@ -19,17 +18,22 @@ class FileReader {
   FileReader();
   ~FileReader();
   bool Open(const std::wstring& file_path);
-  void Read(uint64_t offset, uint32_t size, ReadCallback callback);
+  void Read(uint64_t offset,
+            uint32_t size,
+            uint8_t* buffer,
+            ReadCallback callback);
   void Close();
 
  private:
   struct IORequest {
     OVERLAPPED overlapped;
     FileReader* object;
-    std::shared_ptr<IOBuffer> buffer;
     ReadCallback callback;
   };
   using IORequests = std::vector<IORequest*>;
+
+  FileReader(const FileReader&) = delete;
+  FileReader& operator=(const FileReader&) = delete;
 
   static VOID CALLBACK FileIOCompletionRoutine(DWORD error_code,
                                                DWORD size_read,

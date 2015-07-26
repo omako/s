@@ -9,7 +9,10 @@ class FileReaderProxy {
   FileReaderProxy(TaskQueue* client_task_queue, TaskQueue* io_task_queue);
   ~FileReaderProxy();
   void Open(const std::wstring& file_path, std::function<void(bool)> callback);
-  void Read(uint64_t offset, uint32_t size, FileReader::ReadCallback callback);
+  void Read(uint64_t offset,
+            uint32_t size,
+            uint8_t* buffer,
+            FileReader::ReadCallback callback);
   void Close(std::function<void()> callback);
 
  private:

@@ -20,17 +20,19 @@ bool FileReader::Open(const std::wstring& file_path) {
   return file_handle_ != INVALID_HANDLE_VALUE;
 }
 
-void FileReader::Read(uint64_t offset, uint32_t size, ReadCallback callback) {
+void FileReader::Read(uint64_t offset,
+                      uint32_t size,
+                      uint8_t* buffer,
+                      ReadCallback callback) {
   IORequest* io_request = new IORequest();
   io_requests_.push_back(io_request);
   memset(&io_request->overlapped, 0, sizeof(io_request->overlapped));
   io_request->overlapped.Offset = offset & 0xFFFFFFFF;
   io_request->overlapped.OffsetHigh = (offset >> 32) & 0xFFFFFFFF;
   io_request->object = this;
-  io_request->buffer.reset(new IOBuffer(size));
   io_request->callback = callback;
-  BOOL res = ReadFileEx(file_handle_, io_request->buffer->data(), size,
-                        &io_request->overlapped, &FileIOCompletionRoutine);
+  BOOL res = ReadFileEx(file_handle_, buffer, size, &io_request->overlapped,
+                        &FileIOCompletionRoutine);
   if (!res) {
     DeleteRequest(io_request);
     ReadResult result = { FILE_READ_ERROR };
@@ -64,15 +66,12 @@ void FileReader::OnDataRead(DWORD error_code,
   ReadResult result;
   if (error_code == ERROR_SUCCESS) {
     result.status = FILE_READ_SUCCESS;
-    result.buffer = io_request->buffer;
     result.size = size_read;
   } else if (error_code == ERROR_HANDLE_EOF) {
     result.status = FILE_READ_EOF;
-    result.buffer = nullptr;
     result.size = 0;
   } else {
     result.status = FILE_READ_ERROR;
-    result.buffer = nullptr;
     result.size = 0;
   }
   io_request->callback(result);

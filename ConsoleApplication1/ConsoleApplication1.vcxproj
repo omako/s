@@ -76,9 +76,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="file_enum.h" />
     <ClInclude Include="file_reader.h" />
     <ClInclude Include="file_reader_proxy.h" />

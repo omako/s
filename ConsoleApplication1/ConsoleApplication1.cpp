@@ -69,6 +69,15 @@ int _tmain(int argc, _TCHAR* argv[]) {
   return 0;
 }
 
+class DataConsumer {
+ public:
+  virtual ~DataConsumer() {}
+  virtual void OnDataAvailable(const std::wstring& file_path,
+                               uint8_t* data,
+                               uint32_t size) = 0;
+  virtual void OnDataEnd() = 0;
+};
+
 class Scanner {
  public:
   Scanner(unsigned max_open_files,
@@ -76,7 +85,7 @@ class Scanner {
           FileEnum* file_enum,
           TaskQueue* task_queue,
           TaskQueue* io_task_queue,
-          std::function<void()> finish_callback);
+          DataConsumer* consumer);
   ~Scanner();
 
   void Start();
@@ -91,12 +100,18 @@ class Scanner {
     std::wstring file_path;  // For logging.
   };
   using Readers = std::list<std::unique_ptr<Reader>>;
+  struct IOBuffer {
+    std::vector<uint8_t> buffer;
+    bool is_busy;
+  };
+  using IOBuffers = std::vector<IOBuffer>;
 
   Scanner(const Scanner&) = delete;
   Scanner& operator=(const Scanner&) = delete;
 
   void OnOpenFile(Readers::iterator reader_iter, bool result);
   void OnReadFile(Readers::iterator reader_iter,
+                  IOBuffer* io_buffer,
                   FileReader::ReadResult read_result);
   void OnCloseFile(Readers::iterator reader_iter);
   bool FindNextIdleReader();
@@ -104,16 +119,17 @@ class Scanner {
   void OpenNextFile();
   void ReadNextBlock();
   void DeleteReader(Readers::iterator reader_iter);
+  IOBuffer* FindFreeIOBuffer();
 
   const unsigned max_open_files_;
   const unsigned max_parallel_reads_;
   FileEnum* file_enum_;
   TaskQueue* task_queue_;
   TaskQueue* io_task_queue_;
-  std::function<void()> finish_callback_;
+  DataConsumer* consumer_;
   Readers readers_;
+  IOBuffers io_buffers_;
   Readers::iterator next_reader_;
-  unsigned active_read_count_;
 };
 
 Scanner::Scanner(unsigned max_open_files,
@@ -121,31 +137,33 @@ Scanner::Scanner(unsigned max_open_files,
                  FileEnum* file_enum,
                  TaskQueue* task_queue,
                  TaskQueue* io_task_queue,
-                 std::function<void()> finish_callback)
+                 DataConsumer* consumer)
     : max_open_files_(max_open_files),
       max_parallel_reads_(max_parallel_reads),
       file_enum_(file_enum),
       task_queue_(task_queue),
       io_task_queue_(io_task_queue),
-      finish_callback_(finish_callback),
-      next_reader_(readers_.end()),
-      active_read_count_(0) {
+      consumer_(consumer),
+      next_reader_(readers_.end()) {
 }
 
 Scanner::~Scanner() {
   assert(readers_.empty());
   assert(next_reader_ == readers_.end());
-  assert(active_read_count_ == 0);
 }
 
 void Scanner::Start() {
+  for (unsigned i = 0; i < max_parallel_reads_; ++i) {
+    io_buffers_.emplace_back();
+    IOBuffer& io_buffer = io_buffers_.back();
+    io_buffer.buffer.resize(kBlockSize);
+    io_buffer.is_busy = false;
+  }
   OpenNextFile();
   next_reader_ = readers_.begin();
 }
 
 void Scanner::OnOpenFile(Readers::iterator reader_iter, bool result) {
-  //std::wcout << "Open: result=" << result << ", " << (*reader_iter)->file_path
-  //           << std::endl;
   if (!result) {
     DeleteReader(reader_iter);
     return;
@@ -156,17 +174,17 @@ void Scanner::OnOpenFile(Readers::iterator reader_iter, bool result) {
 }
 
 void Scanner::OnReadFile(Readers::iterator reader_iter,
+                         IOBuffer* io_buffer,
                          FileReader::ReadResult read_result) {
-  //std::wcout << "Read: status=" << read_result.status
-  //           << ", size=" << read_result.size << ", "
-  //           << (*reader_iter)->file_path << std::endl;
-  --active_read_count_;
   Reader* reader = reader_iter->get();
+  io_buffer->is_busy = false;
   if (read_result.status != FileReader::FILE_READ_SUCCESS) {
     reader->state = ReaderState::kClosing;
     reader->file_reader->Close(
         std::bind(&Scanner::OnCloseFile, this, reader_iter));
   } else {
+    consumer_->OnDataAvailable(reader->file_path, io_buffer->buffer.data(),
+                               read_result.size);
     reader->state = ReaderState::kIdle;
     reader->read_offset += read_result.size;
   }
@@ -174,7 +192,6 @@ void Scanner::OnReadFile(Readers::iterator reader_iter,
 }
 
 void Scanner::OnCloseFile(Readers::iterator reader_iter) {
-  //std::wcout << "Close: " << (*reader_iter)->file_path << std::endl;
   DeleteReader(reader_iter);
 }
 
@@ -218,17 +235,19 @@ void Scanner::OpenNextFile() {
                                         std::placeholders::_1));
   }
   if (readers_.empty())
-    finish_callback_();
+    consumer_->OnDataEnd();
 }
 
 void Scanner::ReadNextBlock() {
-  while (active_read_count_ < max_parallel_reads_ && FindNextIdleReader()) {
+  Scanner::IOBuffer* io_buffer;
+  while ((io_buffer = FindFreeIOBuffer()) && FindNextIdleReader()) {
     Reader* reader = next_reader_->get();
     reader->state = ReaderState::kReading;
-    ++active_read_count_;
-    reader->file_reader->Read(reader->read_offset, kBlockSize,
-                              std::bind(&Scanner::OnReadFile, this,
-                                        next_reader_, std::placeholders::_1));
+    io_buffer->is_busy = true;
+    reader->file_reader->Read(
+        reader->read_offset, kBlockSize, io_buffer->buffer.data(),
+        std::bind(&Scanner::OnReadFile, this, next_reader_, io_buffer,
+                  std::placeholders::_1));
     MoveNextReader();
   }
 }
@@ -242,21 +261,54 @@ void Scanner::DeleteReader(Readers::iterator reader_iter) {
   OpenNextFile();
 }
 
-void IOThread(TaskQueue* io_task_queue) {
-  io_task_queue->Run();
+Scanner::IOBuffer* Scanner::FindFreeIOBuffer() {
+  for (Scanner::IOBuffer& io_buffer : io_buffers_) {
+    if (!io_buffer.is_busy)
+      return &io_buffer;
+  }
+  return nullptr;
 }
 
-void FinishCallback(TaskQueue* task_queue) {
-  task_queue->PostQuitTask();
+class DataConsumerImpl : public DataConsumer {
+ public:
+  DataConsumerImpl(TaskQueue* task_queue);
+
+ private:
+  // DataConsumer
+  void OnDataAvailable(const std::wstring& file_path,
+                       uint8_t* data,
+                       uint32_t size) override;
+  void OnDataEnd() override;
+
+  TaskQueue* task_queue_;
+};
+
+DataConsumerImpl::DataConsumerImpl(TaskQueue* task_queue)
+    : task_queue_(task_queue) {
+}
+
+void DataConsumerImpl::OnDataAvailable(const std::wstring& file_path,
+                                       uint8_t* data,
+                                       uint32_t size) {
+  std::wcout << "file_path=" << file_path << ", size=" << size << std::endl;
+}
+
+void DataConsumerImpl::OnDataEnd() {
+  task_queue_->PostQuitTask();
+}
+
+void IOThread(TaskQueue* io_task_queue) {
+  io_task_queue->Run();
 }
 
 void TestScanner() {
   std::unique_ptr<TaskQueue> task_queue(new TaskQueueImpl());
   std::unique_ptr<TaskQueue> io_task_queue(new IOTaskQueue());
   std::thread io_thread(std::bind(&IOThread, io_task_queue.get()));
-  FileEnum file_enum(L"C:\\GOG Games\\The Witcher 3 Wild Hunt");
+  FileEnum file_enum(L"C:\\Temp");
+  DataConsumerImpl consumer(task_queue.get());
   Scanner scanner(16, 8, &file_enum, task_queue.get(), io_task_queue.get(),
-                  std::bind(&FinishCallback, task_queue.get()));
+                  &consumer);
   scanner.Start();
   task_queue->Run();
   io_task_queue->PostQuitTask();

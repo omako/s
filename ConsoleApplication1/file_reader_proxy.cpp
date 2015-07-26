@@ -23,12 +23,13 @@ void FileReaderProxy::Open(const std::wstring& file_path,
 
 void FileReaderProxy::Read(uint64_t offset,
                            uint32_t size,
+                           uint8_t* buffer,
                            FileReader::ReadCallback callback) {
   assert(file_reader_ != nullptr);
   FileReader::ReadCallback cb = std::bind(
       &FileReaderProxy::OnReadCompleted, this, callback, std::placeholders::_1);
   io_task_queue_->Post(std::unique_ptr<Task>(new SimpleTask(
-      std::bind(&FileReader::Read, file_reader_, offset, size, cb))));
+      std::bind(&FileReader::Read, file_reader_, offset, size, buffer, cb))));
 }
 
 void FileReaderProxy::Close(std::function<void()> callback) {
