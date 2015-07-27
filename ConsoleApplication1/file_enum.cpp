@@ -19,34 +19,41 @@ FileEnum::~FileEnum() {
 }
 
 bool FileEnum::Next() {
-  if (dir_stack_.empty())
-    return false;
-  DirStackItem& item = dir_stack_.top();
-  if (item.find_handle == INVALID_HANDLE_VALUE) {
-    std::wstring find_path(item.dir_path);
-    find_path += L"\\*";
-    item.find_handle = FindFirstFile(find_path.c_str(), &find_data_);
+  while (true) {
+    if (dir_stack_.empty())
+      return false;
+    DirStackItem& item = dir_stack_.top();
     if (item.find_handle == INVALID_HANDLE_VALUE) {
-      dir_stack_.pop();
-      return Next();
+      std::wstring find_path(item.dir_path);
+      find_path += L"\\*";
+      item.find_handle = FindFirstFile(find_path.c_str(), &find_data_);
+      if (item.find_handle == INVALID_HANDLE_VALUE) {
+        dir_stack_.pop();
+        continue;
+      }
+    } else {
+      if (!FindNextFile(item.find_handle, &find_data_)) {
+        BOOL res = FindClose(item.find_handle);
+        assert(res);
+        if (!file_phase_)
+          dir_stack_.pop();
+        file_phase_ = !file_phase_;
+        continue;
+      }
     }
-  } else {
-    if (!FindNextFile(item.find_handle, &find_data_)) {
-      BOOL res = FindClose(item.find_handle);
-      assert(res);
-      dir_stack_.pop();
-      return Next();
+    if (file_phase_ && IsDir())
+      continue;
+    if (!file_phase_ && (wcscmp(find_data_.cFileName, L".") == 0 ||
+        wcscmp(find_data_.cFileName, L"..") == 0))
+      continue;
+    current_path_ = item.dir_path + L"\\" + find_data_.cFileName;
+    if (IsDir()) {
+      DirStackItem item;
+      item.dir_path = current_path_;
+      item.find_handle = INVALID_HANDLE_VALUE;
+      dir_stack_.push(item);
+      file_phase_ = true;
     }
+    return true;
   }
-  if (wcscmp(find_data_.cFileName, L".") == 0 ||
-      wcscmp(find_data_.cFileName, L"..") == 0)
-    return Next();
-  current_path_ = item.dir_path + L"\\" + find_data_.cFileName;
-  if (find_data_.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-    DirStackItem item;
-    item.dir_path = current_path_;
-    item.find_handle = INVALID_HANDLE_VALUE;
-    dir_stack_.push(item);
-  }
-  return true;
 }

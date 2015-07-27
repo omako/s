@@ -20,4 +20,5 @@ class FileEnum {
   std::stack<DirStackItem> dir_stack_;
   std::wstring current_path_;
   WIN32_FIND_DATA find_data_;
+  bool file_phase_;
 };
