@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <tchar.h>
 #include <windows.h>
+#undef max
+#undef min
 
 #include <cassert>
 #include <condition_variable>
@@ -20,6 +22,8 @@
 #include <stack>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 // TODO: reference additional headers your program requires here
