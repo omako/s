@@ -2,7 +2,7 @@
 
 #include "file_enum.h"
 
-FileEnum::FileEnum(const std::wstring& root_path) {
+FileEnum::FileEnum(const std::wstring& root_path) : file_phase_(true) {
   DirStackItem item;
   item.dir_path = root_path;
   item.find_handle = INVALID_HANDLE_VALUE;
