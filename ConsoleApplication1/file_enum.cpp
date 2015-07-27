@@ -43,7 +43,7 @@ bool FileEnum::Next() {
         continue;
       }
     }
-    if (file_phase_ && IsDir())
+    if (file_phase_ == IsDir())
       continue;
     if (!file_phase_ && (wcscmp(find_data_.cFileName, L".") == 0 ||
         wcscmp(find_data_.cFileName, L"..") == 0))

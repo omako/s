@@ -10,7 +10,7 @@ ProcessingManager::ProcessingManager(
     unsigned num_processors,
     TaskQueue* task_queue,
     TaskQueue* io_task_queue,
-    const ProcessingContextFactory& processing_context_factory,
+    ProcessingContextFactory* processing_context_factory,
     const std::wstring& path)
     : num_processors_(num_processors),
       task_queue_(task_queue),
@@ -105,7 +105,8 @@ FileId ProcessingManager::ProcessNextFile() {
     processing_queue_.erase(file_iter);
     files_in_processing_.insert(file_id);
     if (!file->context)
-      file->context.reset(processing_context_factory_());
+      file->context.reset(
+          processing_context_factory_->CreateProcessingContext(file->path));
     return file_id;
   }
   return kInvalidFileId;
@@ -133,7 +134,7 @@ void ProcessingManager::GiveTasksToProcessors() {
       }
     }
     if (file_id == kInvalidFileId)
-      break;
+      continue;
     File* file = files_[file_id].get();
     std::shared_ptr<DataBlock> data_block(file->data_blocks.front());
     file->data_blocks.pop_front();

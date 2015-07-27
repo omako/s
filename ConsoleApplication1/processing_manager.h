@@ -14,7 +14,7 @@ class ProcessingManager : public DataConsumer {
                     unsigned num_processors,
                     TaskQueue* task_queue,
                     TaskQueue* io_task_queue,
-                    const ProcessingContextFactory& processing_context_factory,
+                    ProcessingContextFactory* processing_context_factory,
                     const std::wstring& path);
 
   void Start();
@@ -59,8 +59,7 @@ class ProcessingManager : public DataConsumer {
 
   const unsigned num_processors_;
   TaskQueue* task_queue_;
-  TaskQueue* io_task_queue_;
-  ProcessingContextFactory processing_context_factory_;
+  ProcessingContextFactory* processing_context_factory_;
   FileEnum file_enum_;
   DataProvider data_provider_;
   bool data_provider_has_finished_;

@@ -10,4 +10,9 @@ class ProcessingContext {
   virtual void ProcessDataBlockPhase2() = 0;
 };
 
-using ProcessingContextFactory = std::function<ProcessingContext*()>;
+class ProcessingContextFactory {
+ public:
+  virtual ~ProcessingContextFactory() {}
+  virtual ProcessingContext* CreateProcessingContext(
+      const std::wstring& file_path) = 0;
+};
