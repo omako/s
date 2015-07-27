@@ -2,8 +2,6 @@
 
 #include "file_reader.h"
 
-#include "io_buffer.h"
-
 FileReader::FileReader() : file_handle_(INVALID_HANDLE_VALUE) {
 }
 
@@ -35,7 +33,7 @@ void FileReader::Read(uint64_t offset,
                         &FileIOCompletionRoutine);
   if (!res) {
     DeleteRequest(io_request);
-    ReadResult result = { FILE_READ_ERROR };
+    FileReaderResult result = {FileReaderStatus::kError};
     callback(result);
   }
 }
@@ -52,10 +50,9 @@ void FileReader::Close() {
 }
 
 // static
-VOID CALLBACK
-FileReader::FileIOCompletionRoutine(DWORD error_code,
-                                    DWORD size_read,
-                                    LPOVERLAPPED overlapped) {
+VOID CALLBACK FileReader::FileIOCompletionRoutine(DWORD error_code,
+                                                  DWORD size_read,
+                                                  LPOVERLAPPED overlapped) {
   IORequest* io_request = reinterpret_cast<IORequest*>(overlapped);
   io_request->object->OnDataRead(error_code, size_read, io_request);
 }
@@ -63,15 +60,15 @@ FileReader::FileIOCompletionRoutine(DWORD error_code,
 void FileReader::OnDataRead(DWORD error_code,
                             uint32_t size_read,
                             IORequest* io_request) {
-  ReadResult result;
+  FileReaderResult result;
   if (error_code == ERROR_SUCCESS) {
-    result.status = FILE_READ_SUCCESS;
+    result.status = FileReaderStatus::kSuccess;
     result.size = size_read;
   } else if (error_code == ERROR_HANDLE_EOF) {
-    result.status = FILE_READ_EOF;
+    result.status = FileReaderStatus::kEOF;
     result.size = 0;
   } else {
-    result.status = FILE_READ_ERROR;
+    result.status = FileReaderStatus::kError;
     result.size = 0;
   }
   io_request->callback(result);

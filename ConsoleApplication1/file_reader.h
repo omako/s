@@ -1,19 +1,10 @@
 #pragma once
 
-class IOBuffer;
+#include "file_reader_result.h"
 
 class FileReader {
  public:
-  enum Status {
-    FILE_READ_SUCCESS,
-    FILE_READ_EOF,
-    FILE_READ_ERROR
-  };
-  struct ReadResult {
-    Status status;
-    uint32_t size;
-  };
-  using ReadCallback = std::function<void(ReadResult)>;
+  using ReadCallback = std::function<void(FileReaderResult)>;
 
   FileReader();
   ~FileReader();
@@ -38,9 +29,7 @@ class FileReader {
   static VOID CALLBACK FileIOCompletionRoutine(DWORD error_code,
                                                DWORD size_read,
                                                LPOVERLAPPED overlapped);
-  void OnDataRead(DWORD error_code,
-                  uint32_t size_read,
-                  IORequest* io_request);
+  void OnDataRead(DWORD error_code, uint32_t size_read, IORequest* io_request);
   void DeleteRequest(IORequest* io_request);
 
   HANDLE file_handle_;

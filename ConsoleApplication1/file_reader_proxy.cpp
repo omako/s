@@ -33,8 +33,8 @@ void FileReaderProxy::Read(uint64_t offset,
 }
 
 void FileReaderProxy::Close(std::function<void()> callback) {
-  io_task_queue_->Post(std::unique_ptr<Task>(new SimpleTask(
-      std::bind(&FileReaderProxy::Close2, this, callback))));
+  io_task_queue_->Post(std::unique_ptr<Task>(
+      new SimpleTask(std::bind(&FileReaderProxy::Close2, this, callback))));
 }
 
 void FileReaderProxy::Open2(const std::wstring& file_path,
@@ -51,9 +51,9 @@ void FileReaderProxy::Open2(const std::wstring& file_path,
 }
 
 void FileReaderProxy::OnReadCompleted(FileReader::ReadCallback callback,
-                                      FileReader::ReadResult read_result) {
-  client_task_queue_->Post(std::unique_ptr<Task>(
-      new SimpleTask(std::bind(callback, read_result))));
+                                      FileReaderResult read_result) {
+  client_task_queue_->Post(
+      std::unique_ptr<Task>(new SimpleTask(std::bind(callback, read_result))));
 }
 
 void FileReaderProxy::Close2(std::function<void()> callback) {

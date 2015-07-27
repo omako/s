@@ -21,7 +21,7 @@ class FileReaderProxy {
 
   void Open2(const std::wstring& file_path, std::function<void(bool)> callback);
   void OnReadCompleted(FileReader::ReadCallback callback,
-                       FileReader::ReadResult read_result);
+                       FileReaderResult read_result);
   void Close2(std::function<void()> callback);
 
   TaskQueue* client_task_queue_;

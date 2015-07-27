@@ -29,15 +29,17 @@ bool FileEnum::Next() {
       item.find_handle = FindFirstFile(find_path.c_str(), &find_data_);
       if (item.find_handle == INVALID_HANDLE_VALUE) {
         dir_stack_.pop();
+        file_phase_ = false;
         continue;
       }
     } else {
       if (!FindNextFile(item.find_handle, &find_data_)) {
         BOOL res = FindClose(item.find_handle);
         assert(res);
+        item.find_handle = INVALID_HANDLE_VALUE;
         if (!file_phase_)
           dir_stack_.pop();
-        file_phase_ = !file_phase_;
+        file_phase_ = false;
         continue;
       }
     }
