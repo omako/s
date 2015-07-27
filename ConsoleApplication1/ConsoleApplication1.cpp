@@ -46,9 +46,12 @@ ProcessingContextImpl::ProcessingContextImpl(const std::string& search_text,
 
 void ProcessingContextImpl::ProcessDataBlockPhase1(
     std::shared_ptr<DataBlock> data_block) {
-  const size_t last_data_index =
-      backup_buffer_.size() + data_block->size() - search_text_.size();
-  for (size_t data_index = 0; data_index <= last_data_index; ++data_index) {
+  size_t data_size = backup_buffer_.size() + data_block->size();
+  if (data_size > search_text_.size() - 1)
+    data_size -= search_text_.size() - 1;
+  else
+    data_size = 0;
+  for (size_t data_index = 0; data_index < data_size; ++data_index) {
     bool is_equal;
     for (size_t text_index = 0; text_index < search_text_.size(); ++text_index) {
       size_t char_index = data_index + text_index;
@@ -112,10 +115,10 @@ void Test(const std::wstring& path, const std::string& search_text) {
   std::thread io_thread([&io_task_queue] { io_task_queue->Run(); });
   Report report;
   ProcessingContextFactoryImpl factory(search_text, &report);
-  ProcessingManager consumer(std::thread::hardware_concurrency(), 1,
-                             std::thread::hardware_concurrency(),
-                             task_queue.get(), io_task_queue.get(),
-                             &factory, path);
+  ProcessingManager consumer(
+      std::thread::hardware_concurrency(), std::thread::hardware_concurrency(),
+      std::thread::hardware_concurrency(), task_queue.get(),
+      io_task_queue.get(), &factory, path);
   consumer.Start();
   task_queue->Run();
   io_task_queue->PostQuitTask();
