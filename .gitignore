@@ -6,3 +6,4 @@ Release/*
 *.opensdf
 *.suo
 *.ipch
+*.vcxproj.user
