@@ -4,6 +4,10 @@
 
 #include "task.h"
 
+namespace {
+const unsigned kPrefetchBlockCount = 10;
+}  // namespace
+
 ProcessingManager::ProcessingManager(
     unsigned max_open_files,
     unsigned max_parallel_reads,
@@ -22,7 +26,12 @@ ProcessingManager::ProcessingManager(
                      task_queue,
                      io_task_queue,
                      this),
-      data_provider_has_finished_(false) {
+      data_provider_has_finished_(false),
+      total_data_size_(0) {
+}
+
+ProcessingManager::~ProcessingManager() {
+  assert(total_data_size_ == 0);
 }
 
 void ProcessingManager::Start() {
@@ -55,6 +64,9 @@ void ProcessingManager::OnDataConsumerBlockRead(FileId file_id,
                                                 uint32_t size) {
   files_[file_id]->data_blocks.emplace_back(new DataBlock(data, data + size));
   GiveTasksToProcessors();
+  total_data_size_ += size;
+  if (total_data_size_ >= GetTotalDataSizeLimit())
+    data_provider_.Suspend();
 }
 
 void ProcessingManager::OnDataConsumerFileClosed(
@@ -73,11 +85,13 @@ void ProcessingManager::Process(Processor* processor,
                                 std::shared_ptr<DataBlock> data_block,
                                 ProcessingContext* context) {
   context->ProcessDataBlockPhase1(data_block);
-  task_queue_->Post(std::unique_ptr<Task>(new SimpleTask(std::bind(
-      &ProcessingManager::OnProcessingReply, this, processor, context))));
+  task_queue_->Post(std::unique_ptr<Task>(
+      new SimpleTask(std::bind(&ProcessingManager::OnProcessingReply, this,
+                               processor, data_block, context))));
 }
 
 void ProcessingManager::OnProcessingReply(Processor* processor,
+                                          std::shared_ptr<DataBlock> data_block,
                                           ProcessingContext* context) {
   processor->is_busy = false;
   context->ProcessDataBlockPhase2();
@@ -138,6 +152,7 @@ void ProcessingManager::GiveTasksToProcessors() {
     File* file = files_[file_id].get();
     std::shared_ptr<DataBlock> data_block(file->data_blocks.front());
     file->data_blocks.pop_front();
+    total_data_size_ -= data_block->size();
     processor->file_id = file_id;
     processor->is_busy = true;
     processor->task_queue->Post(std::unique_ptr<Task>(new SimpleTask(
@@ -145,6 +160,8 @@ void ProcessingManager::GiveTasksToProcessors() {
                   data_block, file->context.get()))));
   }
   CheckForEndOfProcessing();
+  if (total_data_size_ < GetTotalDataSizeLimit())
+    data_provider_.Resume();
 }
 
 void ProcessingManager::CheckForEndOfProcessing() {
@@ -163,4 +180,8 @@ void ProcessingManager::CheckForEndOfProcessing() {
   for (unsigned i = 0; i < num_processors_; ++i)
     processors_[i]->thread.join();
   task_queue_->PostQuitTask();
+}
+
+uint64_t ProcessingManager::GetTotalDataSizeLimit() const {
+  return num_processors_ * DataProvider::kBlockSize * kPrefetchBlockCount;
 }

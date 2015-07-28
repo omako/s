@@ -10,6 +10,8 @@ class TaskQueue;
 
 class DataProvider {
  public:
+  static const uint32_t kBlockSize = 1 << 20;
+
   DataProvider(unsigned max_open_files,
                unsigned max_parallel_reads,
                FileEnum* file_enum,
@@ -19,9 +21,10 @@ class DataProvider {
   ~DataProvider();
 
   void Start();
+  void Suspend();
+  void Resume();
 
  private:
-  const uint32_t kBlockSize = 1 << 20;
   enum class ReaderState { kOpening, kReading, kClosing, kIdle };
   struct Reader {
     std::unique_ptr<FileReaderProxy> file_reader;
@@ -62,4 +65,5 @@ class DataProvider {
   IOBuffers io_buffers_;
   Readers::iterator next_reader_;
   FileId next_file_id_;
+  bool is_suspended_;
 };

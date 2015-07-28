@@ -19,7 +19,8 @@ DataProvider::DataProvider(unsigned max_open_files,
       io_task_queue_(io_task_queue),
       consumer_(consumer),
       next_reader_(readers_.end()),
-      next_file_id_(0) {
+      next_file_id_(0),
+      is_suspended_(false) {
 }
 
 DataProvider::~DataProvider() {
@@ -36,6 +37,15 @@ void DataProvider::Start() {
   }
   OpenNextFile();
   next_reader_ = readers_.begin();
+}
+
+void DataProvider::Suspend() {
+  is_suspended_ = true;
+}
+
+void DataProvider::Resume() {
+  is_suspended_ = false;
+  ReadNextBlock();
 }
 
 void DataProvider::OnOpenFile(Readers::iterator reader_iter, bool result) {
@@ -119,6 +129,8 @@ void DataProvider::OpenNextFile() {
 }
 
 void DataProvider::ReadNextBlock() {
+  if (is_suspended_)
+    return;
   DataProvider::IOBuffer* io_buffer;
   while ((io_buffer = FindFreeIOBuffer()) && FindNextIdleReader()) {
     Reader* reader = next_reader_->get();

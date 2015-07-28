@@ -16,6 +16,7 @@ class ProcessingManager : public DataConsumer {
                     TaskQueue* io_task_queue,
                     ProcessingContextFactory* processing_context_factory,
                     const std::wstring& path);
+  ~ProcessingManager();
 
   void Start();
 
@@ -52,10 +53,13 @@ class ProcessingManager : public DataConsumer {
   void Process(Processor* processor,
                std::shared_ptr<DataBlock> data_block,
                ProcessingContext* context);
-  void OnProcessingReply(Processor* processor, ProcessingContext* context);
+  void OnProcessingReply(Processor* processor,
+                         std::shared_ptr<DataBlock> data_block,
+                         ProcessingContext* context);
   FileId ProcessNextFile();
   void GiveTasksToProcessors();
   void CheckForEndOfProcessing();
+  uint64_t GetTotalDataSizeLimit() const;
 
   const unsigned num_processors_;
   TaskQueue* task_queue_;
@@ -67,4 +71,5 @@ class ProcessingManager : public DataConsumer {
   std::unordered_set<FileId> files_in_processing_;
   ProcessingQueue processing_queue_;
   std::vector<std::unique_ptr<Processor>> processors_;
+  uint64_t total_data_size_;
 };
