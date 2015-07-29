@@ -17,6 +17,7 @@
 /* core constants and types */
 
 
+#if 0
 #if defined _WIN32 || defined __CYGWIN__
 #   ifdef BUILDING_DLL
 #       ifdef __GNUC__
@@ -40,6 +41,10 @@
 #       define SRE_API
 #       define SRE_NOAPI
 #   endif
+#endif
+#else
+#   define SRE_API
+#   define SRE_NOAPI
 #endif
 
 

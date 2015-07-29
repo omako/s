@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="sregex">
+      <UniqueIdentifier>{5bc960aa-88eb-4066-adf7-06415bd94c42}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -51,6 +54,36 @@
     <ClInclude Include="processing_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\ddebug.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sre_capture.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sre_core.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sre_palloc.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sre_regex.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sre_vm_bytecode.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sre_vm_thompson.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sre_vm_thompson_x64.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sre_yyparser.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sregex\src\sregex\sregex.h">
+      <Filter>sregex</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -76,6 +109,33 @@
     </ClCompile>
     <ClCompile Include="processing_manager.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_capture.c">
+      <Filter>sregex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_palloc.c">
+      <Filter>sregex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_regex.c">
+      <Filter>sregex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_regex_compiler.c">
+      <Filter>sregex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_vm_bytecode.c">
+      <Filter>sregex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_vm_pike.c">
+      <Filter>sregex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_vm_thompson.c">
+      <Filter>sregex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_vm_thompson_jit.c">
+      <Filter>sregex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sregex\src\sregex\sre_yyparser.c">
+      <Filter>sregex</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -370,6 +370,13 @@ sre_pool_cleanup_add(sre_pool_t *p, size_t size)
     return c;
 }
 
+#if defined(_WIN32)
+#include <errno.h>
+int posix_memalign(void **memptr, size_t alignment, size_t size) {
+  *memptr = malloc(size);
+  return *memptr ? 0 : ENOMEM;
+}
+#endif
 
 #if !(SRE_USE_VALGRIND)
 static void *

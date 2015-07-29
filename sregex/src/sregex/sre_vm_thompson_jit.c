@@ -23,7 +23,7 @@
 
 #include <sregex/sre_capture.h>
 #include <sregex/sre_vm_bytecode.h>
-#if (SRE_TARGET != SRE_ARCH_UNKNOWN)
+#if (SRE_TARGET == SRE_ARCH_X64)
 #include <sys/mman.h>
 #include <stdio.h>
 #endif
@@ -158,7 +158,7 @@ sre_vm_thompson_jit_compile(sre_pool_t *pool, sre_program_t *prog,
 SRE_API sre_int_t
 sre_vm_thompson_jit_free(sre_vm_thompson_code_t *code)
 {
-#if (SRE_TARGET != SRE_ARCH_UNKNOWN)
+#if (SRE_TARGET == SRE_ARCH_X64)
     if (munmap(code, code->size) != 0) {
         return SRE_ERROR;
     }

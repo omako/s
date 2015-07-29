@@ -2633,7 +2633,7 @@ yylex(YYSTYPE *lvalp, YYLTYPE *locp, sre_pool_t *pool, sre_char **src)
             return SRE_REGEX_TOKEN_CHAR;
 
         case 'e':
-            lvalp->ch = '\e';
+            lvalp->ch = '\x1B';
             locp->last = *src;
             return SRE_REGEX_TOKEN_CHAR;
 
@@ -2903,7 +2903,7 @@ yylex(YYSTYPE *lvalp, YYLTYPE *locp, sre_pool_t *pool, sre_char **src)
                     goto process_char;
 
                 case 'e':
-                    c = '\e';
+                    c = '\x1B';
                     goto process_char;
 
                 case 'b':
