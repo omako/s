@@ -44,6 +44,8 @@ void DataProvider::Suspend() {
 }
 
 void DataProvider::Resume() {
+  if (!is_suspended_)
+    return;
   is_suspended_ = false;
   ReadNextBlock();
 }
@@ -89,6 +91,8 @@ bool DataProvider::FindNextIdleReader() {
     assert(false);
     return false;
   }
+  if (next_reader_ == readers_.end())
+    next_reader_ = readers_.begin();
   Readers::iterator original_iter = next_reader_;
   while ((*next_reader_)->state != ReaderState::kIdle) {
     MoveNextReader();
