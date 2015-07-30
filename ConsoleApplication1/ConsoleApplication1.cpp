@@ -147,7 +147,8 @@ class RegexSearch : public ProcessingContext {
   uint64_t block_offset_;
   uint64_t match_offset_;
   sre_pool_t * sre_pool_;
-  sre_vm_thompson_ctx_t* sre_ctx_;
+  sre_vm_pike_ctx_t* sre_ctx_;
+  std::vector<sre_int_t> matches_;
 };
 
 RegexSearch::RegexSearch(const std::string& regex,
@@ -171,7 +172,9 @@ RegexSearch::RegexSearch(const std::string& regex,
   assert(sre_regex);
   sre_program_t* sre_program = sre_regex_compile(sre_pool_, sre_regex);
   assert(sre_program);
-  sre_ctx_ = sre_vm_thompson_create_ctx(sre_pool_, sre_program);
+  matches_.resize(2 * (ncaps + 1));
+  sre_ctx_ = sre_vm_pike_create_ctx(sre_pool_, sre_program, matches_.data(),
+                                    matches_.size() * sizeof(sre_int_t));
   assert(sre_ctx_);
 }
 
@@ -181,16 +184,16 @@ RegexSearch::~RegexSearch() {
 
 void RegexSearch::ProcessDataBlockPhase1(
     std::shared_ptr<DataBlock> data_block) {
+  sre_int_t* pending_matches;
   sre_char* ch_ptr = data_block->data();
   for (uint32_t offset = 0; offset < data_block->size(); ++offset, ++ch_ptr) {
-    sre_int_t res = sre_vm_thompson_exec(sre_ctx_, ch_ptr, 1, 0);
-    if (res == SRE_OK) {
+    sre_int_t res = sre_vm_pike_exec(sre_ctx_, ch_ptr, 1, 0, &pending_matches);
+    if (res >= 0) {
       Result result;
-      result.offset = match_offset_;
-      result.size = block_offset_ + offset - match_offset_ + 1;
+      result.offset = matches_[0] + block_offset_;
+      result.size = matches_[1] - matches_[0];
       found_.push_back(result);
     } else if (res == SRE_DECLINED) {
-      match_offset_ = block_offset_ + offset + 1;
     } else if (res == SRE_AGAIN) {
     } else {
       assert(false);
@@ -200,11 +203,12 @@ void RegexSearch::ProcessDataBlockPhase1(
 }
 
 void RegexSearch::MarkEndOfData() {
-  sre_int_t res = sre_vm_thompson_exec(sre_ctx_, nullptr, 0, 1);
-  if (res == SRE_OK) {
+  sre_int_t* pending_matches;
+  sre_int_t res = sre_vm_pike_exec(sre_ctx_, nullptr, 0, 1, &pending_matches);
+  if (res >= 0) {
     Result result;
-    result.offset = match_offset_;
-    result.size = block_offset_ - match_offset_ + 1;
+    result.offset = matches_[0] + block_offset_;
+    result.size = matches_[1] - matches_[0];
     found_.push_back(result);
   } else if (res == SRE_DECLINED) {
   } else if (res == SRE_AGAIN) {
